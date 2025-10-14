@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Global YouTube Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background: #f7f9fc; }
+    .header {
+      display:flex; align-items:center; justify-content:space-between; margin: 1rem 0;
+    }
+    .grid {
+      display:grid; grid-template-columns: 1fr; gap: 1rem;
+    }
+    @media (min-width: 992px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .card { background:#fff; padding:1rem; border-radius:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    canvas { max-height: 420px; }
+    /* Force white tables with dark text */
+    table, thead, tbody, tr, th, td { background-color: #ffffff !important; color: #111111 !important; }
+    tbody tr:nth-child(even) { background-color: #fafafa !important; }
+    tbody tr:nth-child(odd) { background-color: #ffffff !important; }
+    thead th { border-bottom: 1px solid #e5e7eb; }
+    tbody td { border-bottom: 1px solid #f0f2f5; }
+  </style>
+  <script>
+    // Utility to format long labels (like in the screenshot)
+    function wrapLabel(value) {
+      if (!value) return value;
+      return value.length > 18 ? value.replaceAll(' - ', ' -\n') : value;
+    }
+  </script>
+</head>
+<body>
+  <main class="container">
+    <div class="header">
+      <h1>Global YouTube Dashboard</h1>
+      <a href="/" role="button">Home</a>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h3>Top 5 Countries by Total Views</h3>
+        {% if country_labels and country_values %}
+        <canvas id="pieCountries"></canvas>
+        {% else %}
+          <p>No country-level view data to show.</p>
+        {% endif %}
+      </section>
+
+      <section class="card">
+        <h3>Top 10 Channels by Subscribers</h3>
+        {% if channel_labels and channel_subscribers %}
+        <canvas id="barChannels"></canvas>
+        {% else %}
+          <p>No channel data to show.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:1rem">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
+        <h3 style="margin:0">Top 5 Channels by Country</h3>
+        <form method="get" action="/dashboard" style="display:flex; gap:.5rem; align-items:center">
+          <label for="country" style="margin:0">Country:</label>
+          <select id="country" name="country" onchange="this.form.submit()">
+            {% for c in countries %}
+              <option value="{{ c }}" {% if c == selected_country %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit">Apply</button></noscript>
+        </form>
+      </div>
+
+      {% if country_top_rows %}
+      <div style="overflow-x:auto; margin-top:.5rem">
+        <table>
+          <thead>
+            <tr>
+              <th>Channel Name</th>
+              <th>Subscribers</th>
+              <th>Views</th>
+              <th>Country</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in country_top_rows %}
+            <tr>
+              <td>{{ r.get('channel_name','') }}</td>
+              <td>{{ '{:,.0f}'.format(r.get('subscribers', 0)) }}</td>
+              <td>{{ '{:,.0f}'.format(r.get('views', 0)) }}</td>
+              <td>{{ r.get('country','') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <p>No rows to display for the selected country.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <script>
+    // Pie chart for countries
+    {% if country_labels and country_values %}
+    const pieCtx = document.getElementById('pieCountries').getContext('2d');
+    new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: {{ country_labels | tojson }},
+        datasets: [{
+          data: {{ country_values | tojson }},
+          backgroundColor: [
+            '#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'
+          ]
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+    {% endif %}
+
+    // Bar chart for channels
+    {% if channel_labels and channel_subscribers %}
+    const barCtx = document.getElementById('barChannels').getContext('2d');
+    new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ channel_labels | tojson }},
+        datasets: [{
+          label: 'Subscribers',
+          data: {{ channel_subscribers | tojson }},
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgb(54, 162, 235)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value){
+                // Format in Indian numbering style similar to screenshot
+                return value.toLocaleString('en-IN');
+              }
+            }
+          },
+          x: {
+            ticks: {
+              callback: function(value, index){
+                const label = this.getLabelForValue(index);
+                return wrapLabel(label);
+              }
+            }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+    {% endif %}
+  </script>
+</body>
+</html>

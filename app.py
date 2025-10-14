@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from sqlalchemy import create_engine, inspect, text
 import pandas as pd
 from pathlib import Path
@@ -23,17 +23,22 @@ def dashboard():
             'dashboard.html',
             top_channels=[],
             country_labels=[],
-            country_values=[]
+            country_values=[],
+            channel_labels=[],
+            channel_subscribers=[],
+            countries=[],
+            selected_country='',
+            country_top_rows=[]
         )
 
     # Load data from DB
     try:
         df = pd.read_sql(text('SELECT * FROM youtube_stats'), con=engine)
     except Exception:
-        return render_template('dashboard.html', top_channels=[], country_labels=[], country_values=[])
+        return render_template('dashboard.html', top_channels=[], country_labels=[], country_values=[], channel_labels=[], channel_subscribers=[], countries=[], selected_country='', country_top_rows=[])
 
     if df.empty:
-        return render_template('dashboard.html', top_channels=[], country_labels=[], country_values=[])
+        return render_template('dashboard.html', top_channels=[], country_labels=[], country_values=[], channel_labels=[], channel_subscribers=[], countries=[], selected_country='', country_top_rows=[])
 
     # Normalize column names: lower snake_case
     def normalize(col: str) -> str:
@@ -82,6 +87,13 @@ def dashboard():
         cols = needed_for_top + extra_cols
         top_channels = df.nlargest(10, 'subscribers')[cols]
 
+    # Prepare channel chart arrays
+    if {'channel_name', 'subscribers'}.issubset(top_channels.columns) and not top_channels.empty:
+        channel_labels = list(top_channels['channel_name'].astype(str))
+        channel_subscribers = list(top_channels['subscribers'].fillna(0).astype(float))
+    else:
+        channel_labels, channel_subscribers = [], []
+
     if not {'country', 'views'}.issubset(df.columns):
         country_labels, country_values = [], []
     else:
@@ -89,11 +101,43 @@ def dashboard():
         country_labels = list(country_views.index.astype(str))
         country_values = list(country_views.values)
 
+    # Country selector: list of countries available
+    if 'country' in df.columns:
+        countries = sorted([str(c) for c in df['country'].dropna().unique()])
+    else:
+        countries = []
+
+    # Selected country from query (default to first available)
+    selected_country = request.args.get('country') if countries else ''
+    if not selected_country and countries:
+        selected_country = countries[0]
+
+    # Top 5 channels for selected country
+    if countries and selected_country:
+        subset = df[df['country'].astype(str) == selected_country]
+    else:
+        subset = pd.DataFrame(columns=['channel_name','subscribers','views','country'])
+
+    if not subset.empty and {'channel_name','subscribers'}.issubset(subset.columns):
+        cols_for_table = [c for c in ['channel_name','subscribers','views','country'] if c in subset.columns]
+        top5 = subset.sort_values('subscribers', ascending=False).head(5)[cols_for_table]
+        for col in ['subscribers','views']:
+            if col in top5.columns:
+                top5[col] = pd.to_numeric(top5[col], errors='coerce').fillna(0)
+        country_top_rows = top5.to_dict(orient='records')
+    else:
+        country_top_rows = []
+
     return render_template(
         'dashboard.html',
         top_channels=top_channels.to_dict(orient='records'),
         country_labels=country_labels,
         country_values=country_values,
+        channel_labels=channel_labels,
+        channel_subscribers=channel_subscribers,
+        countries=countries,
+        selected_country=selected_country,
+        country_top_rows=country_top_rows,
     )
 
 if __name__ == '__main__':
