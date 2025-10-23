@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f6f8fb; }
+        .card { border: none; box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,0.06); }
+        .chart-card { height: 420px; }
+        .chart-wrapper { position: relative; height: 320px; }
+        .table-card { overflow: hidden; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+        <div class="container-xxl">
+            <a class="navbar-brand fw-semibold" href="/">YouTube Analytics</a>
+        </div>
+    </nav>
+
+    <main class="container-xxl py-4 py-md-5">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+            <h2 class="m-0">Global YouTube Dashboard</h2>
+            <a class="btn btn-outline-primary" href="/">Home</a>
+        </div>
+
+        <div class="row g-4">
+            <!-- Pie Chart -->
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="m-0">Top Countries by Total Views</h5>
+                        <select class="form-select form-select-sm w-auto" id="countryLimit">
+                            <option value="3">Top 3</option>
+                            <option value="5" selected>Top 5</option>
+                            <option value="10">Top 10</option>
+                            <option value="15">Top 15</option>
+                            <option value="20">Top 20</option>
+                        </select>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="countryChart"></canvas>
+                    </div>
+                    {% if not all_countries %}
+                        <p class="text-center text-muted m-0">No country data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h5 class="m-0">Top Channels by Subscribers</h5>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="categoryFilter" style="min-width: 140px;">
+                                <option value="all" selected>All Categories</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                            <select class="form-select form-select-sm" id="channelLimit" style="min-width: 100px;">
+                                <option value="5">Top 5</option>
+                                <option value="10" selected>Top 10</option>
+                                <option value="15">Top 15</option>
+                                <option value="20">Top 20</option>
+                                <option value="30">Top 30</option>
+                                <option value="50">Top 50</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="channelChart"></canvas>
+                    </div>
+                    {% if not all_channels %}
+                        <p class="text-center text-muted m-0">No channel data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card table-card mt-4">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="m-0">Channel Details</h5>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <select class="form-select form-select-sm" id="tableCountryFilter" style="min-width: 150px;">
+                            <option value="all" selected>All Countries</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="tableCategoryFilter" style="min-width: 140px;">
+                            <option value="all" selected>All Categories</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select form-select-sm" id="tableLimit" style="min-width: 100px;">
+                            <option value="10" selected>Show 10</option>
+                            <option value="20">Show 20</option>
+                            <option value="30">Show 30</option>
+                            <option value="50">Show 50</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle m-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Channel Name</th>
+                                <th class="text-end">Subscribers</th>
+                                <th class="text-end">Views</th>
+                                <th>Category</th>
+                                <th>Country</th>
+                            </tr>
+                        </thead>
+                        <tbody id="channelTableBody">
+                            {% if all_channels %}
+                                {% for ch in all_channels[:10] %}
+                                <tr>
+                                    <td>{{ ch.channel_name }}</td>
+                                    <td class="text-end">{{ "{:,.0f}".format(ch.subscribers) if ch.subscribers else 'N/A' }}</td>
+                                    <td class="text-end">{{ "{:,.0f}".format(ch.views) if ch.views else 'N/A' }}</td>
+                                    <td>{{ ch.category if ch.category else 'N/A' }}</td>
+                                    <td>{{ ch.country }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">No data available.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+    // Data injected from Flask (stringified JSON for editor friendliness)
+    const ALL_COUNTRIES = JSON.parse('{{ all_countries | tojson | safe }}');
+    const ALL_CHANNELS = JSON.parse('{{ all_channels | tojson | safe }}');
+
+    // Chart instances
+    let countryChartInstance = null;
+    let channelChartInstance = null;
+
+    // Category color mapping
+    const CATEGORY_COLORS = {
+        'Music': '#FF6384',
+        'Entertainment': '#36A2EB',
+        'Gaming': '#FFCE56',
+        'Sports': '#4BC0C0',
+        'News': '#9966FF',
+        'Education': '#FF9F40',
+        'Comedy': '#FF6384',
+        'Film & Animation': '#C9CBCF',
+        'People & Blogs': '#4BC0C0',
+        'Science & Technology': '#36A2EB',
+        'Autos & Vehicles': '#FFCE56',
+        'Pets & Animals': '#FF9F40',
+        'Travel & Events': '#9966FF',
+        'Howto & Style': '#FF6384',
+        'Nonprofits & Activism': '#4BC0C0',
+        'Shows': '#36A2EB',
+        'Trailers': '#FFCE56',
+        'Movies': '#C9CBCF',
+        'Games': '#9966FF'
+    };
+
+    function getCategoryColor(category) {
+        return CATEGORY_COLORS[category] || '#95A5A6';
+    }
+
+    // Function to update country chart
+    function updateCountryChart(limit) {
+        const data = ALL_COUNTRIES.slice(0, limit);
+        const labels = data.map(x => x.country ?? '');
+        const values = data.map(x => x.views ?? 0);
+
+        const countryCtx = document.getElementById('countryChart');
+        if (!countryCtx) return;
+
+        if (countryChartInstance) {
+            countryChartInstance.destroy();
+        }
+
+        countryChartInstance = new Chart(countryCtx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#4BC0C0','#9966FF','#FF6384','#36A2EB','#FFCE56','#FF9F40','#4BC0C0','#9966FF','#FF6384','#36A2EB','#FFCE56','#FF9F40','#4BC0C0','#9966FF']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Function to update channel chart
+    function updateChannelChart(limit, category = 'all') {
+        // Filter by category
+        let filteredData = ALL_CHANNELS;
+        if (category !== 'all') {
+            filteredData = ALL_CHANNELS.filter(ch => ch.category === category);
+        }
+
+        const data = filteredData.slice(0, limit);
+        const labels = data.map(x => x.channel_name ?? '');
+        const values = data.map(x => x.subscribers ?? 0);
+        const colors = data.map(x => getCategoryColor(x.category));
+
+        const channelCtx = document.getElementById('channelChart');
+        if (!channelCtx) return;
+
+        if (channelChartInstance) {
+            channelChartInstance.destroy();
+        }
+
+        channelChartInstance = new Chart(channelCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Subscribers',
+                    data: values,
+                    backgroundColor: colors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
+                    y: { beginAtZero: true }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { 
+                        mode: 'index', 
+                        intersect: false,
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const channel = data[context.dataIndex];
+                                return channel.category ? 'Category: ' + channel.category : '';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Event listeners for dropdowns
+    document.getElementById('countryLimit').addEventListener('change', (e) => {
+        updateCountryChart(parseInt(e.target.value));
+    });
+
+    document.getElementById('channelLimit').addEventListener('change', (e) => {
+        const limit = parseInt(e.target.value);
+        const category = document.getElementById('categoryFilter').value;
+        updateChannelChart(limit, category);
+    });
+
+    document.getElementById('categoryFilter').addEventListener('change', (e) => {
+        const limit = parseInt(document.getElementById('channelLimit').value);
+        const category = e.target.value;
+        updateChannelChart(limit, category);
+    });
+
+    // Initial render
+    updateCountryChart(5);
+    updateChannelChart(10, 'all');
+
+    // Populate country filter dropdown
+    const uniqueCountries = [...new Set(ALL_CHANNELS.map(ch => ch.country).filter(c => c))].sort();
+    const countryFilterSelect = document.getElementById('tableCountryFilter');
+    uniqueCountries.forEach(country => {
+        const option = document.createElement('option');
+        option.value = country;
+        option.textContent = country;
+        countryFilterSelect.appendChild(option);
+    });
+
+    // Function to update table
+    function updateTable(limit, country = 'all', category = 'all') {
+        let filteredData = ALL_CHANNELS;
+
+        // Filter by country
+        if (country !== 'all') {
+            filteredData = filteredData.filter(ch => ch.country === country);
+        }
+
+        // Filter by category
+        if (category !== 'all') {
+            filteredData = filteredData.filter(ch => ch.category === category);
+        }
+
+        const data = filteredData.slice(0, limit);
+        const tbody = document.getElementById('channelTableBody');
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No channels match your filters.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(ch => `
+            <tr>
+                <td>${ch.channel_name || 'N/A'}</td>
+                <td class="text-end">${ch.subscribers ? ch.subscribers.toLocaleString() : 'N/A'}</td>
+                <td class="text-end">${ch.views ? ch.views.toLocaleString() : 'N/A'}</td>
+                <td>${ch.category || 'N/A'}</td>
+                <td>${ch.country || 'N/A'}</td>
+            </tr>
+        `).join('');
+    }
+
+    // Event listeners for table filters
+    document.getElementById('tableCountryFilter').addEventListener('change', (e) => {
+        const country = e.target.value;
+        const category = document.getElementById('tableCategoryFilter').value;
+        const limit = parseInt(document.getElementById('tableLimit').value);
+        updateTable(limit, country, category);
+    });
+
+    document.getElementById('tableCategoryFilter').addEventListener('change', (e) => {
+        const category = e.target.value;
+        const country = document.getElementById('tableCountryFilter').value;
+        const limit = parseInt(document.getElementById('tableLimit').value);
+        updateTable(limit, country, category);
+    });
+
+    document.getElementById('tableLimit').addEventListener('change', (e) => {
+        const limit = parseInt(e.target.value);
+        const country = document.getElementById('tableCountryFilter').value;
+        const category = document.getElementById('tableCategoryFilter').value;
+        updateTable(limit, country, category);
+    });
+</script>
+</body>
+</html>
