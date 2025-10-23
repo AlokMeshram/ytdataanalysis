@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from sqlalchemy import create_engine, inspect, text
 import pandas as pd
 from pathlib import Path
@@ -21,19 +21,59 @@ def dashboard():
         # No data available
         return render_template(
             'dashboard.html',
-            top_channels=[],
+            channel_labels=[],
+            channel_subscribers=[],
             country_labels=[],
-            country_values=[]
+            country_values=[],
+            all_countries=[],
+            selected_country='',
+            country_top_rows=[],
+            total_channels=0,
+            total_subscribers=0,
+            total_views=0,
+            avg_subscribers=0,
+            num_channels=10,
+            num_countries=5
         )
 
     # Load data from DB
     try:
         df = pd.read_sql(text('SELECT * FROM youtube_stats'), con=engine)
     except Exception:
-        return render_template('dashboard.html', top_channels=[], country_labels=[], country_values=[])
+        return render_template(
+            'dashboard.html',
+            channel_labels=[],
+            channel_subscribers=[],
+            country_labels=[],
+            country_values=[],
+            all_countries=[],
+            selected_country='',
+            country_top_rows=[],
+            total_channels=0,
+            total_subscribers=0,
+            total_views=0,
+            avg_subscribers=0,
+            num_channels=10,
+            num_countries=5
+        )
 
     if df.empty:
-        return render_template('dashboard.html', top_channels=[], country_labels=[], country_values=[])
+        return render_template(
+            'dashboard.html',
+            channel_labels=[],
+            channel_subscribers=[],
+            country_labels=[],
+            country_values=[],
+            all_countries=[],
+            selected_country='',
+            country_top_rows=[],
+            total_channels=0,
+            total_subscribers=0,
+            total_views=0,
+            avg_subscribers=0,
+            num_channels=10,
+            num_countries=5
+        )
 
     # Normalize column names: lower snake_case
     def normalize(col: str) -> str:
@@ -74,34 +114,57 @@ def dashboard():
     if present:
         df = df.dropna(subset=present)
 
-    needed_for_top = ['channel_name', 'subscribers']
-    extra_cols = [c for c in ['views', 'country'] if c in df.columns]
-    # Get full datasets for client-side filtering
-    needed_for_top = ['channel_name', 'subscribers']
-    extra_cols = [c for c in ['views', 'country', 'category'] if c in df.columns]
+    # Get user-selected number of items for charts
+    num_channels = request.args.get('num_channels', 10, type=int)
+    num_countries = request.args.get('num_countries', 5, type=int)
     
-    if not set(needed_for_top).issubset(df.columns):
-        all_channels = pd.DataFrame(columns=needed_for_top + extra_cols)
+    # Ensure valid ranges
+    num_channels = max(3, min(num_channels, 50))  # Between 3 and 50
+    num_countries = max(3, min(num_countries, 20))  # Between 3 and 20
+    
+    # Get top N channels for bar chart
+    top_channels = df.nlargest(num_channels, 'subscribers')
+    channel_labels = top_channels['channel_name'].tolist()
+    channel_subscribers = top_channels['subscribers'].tolist()
+    
+    # Get top N countries for pie chart
+    country_views = df.groupby('country')['views'].sum().nlargest(num_countries)
+    country_labels = country_views.index.tolist()
+    country_values = country_views.values.tolist()
+    
+    # Get all countries for dropdown
+    all_countries = sorted(df['country'].unique().tolist())
+    selected_country = request.args.get('country', all_countries[0] if all_countries else '')
+    
+    # Get top 5 channels for selected country
+    if selected_country:
+        country_df = df[df['country'] == selected_country]
+        top_5_country = country_df.nlargest(5, 'subscribers')
+        country_top_rows = top_5_country[['channel_name', 'subscribers', 'views', 'country']].to_dict('records')
     else:
-        cols = needed_for_top + extra_cols
-        all_channels = df.nlargest(50, 'subscribers')[cols]  # Get top 50 for flexibility
-
-    # Get unique categories for filter dropdown
-    categories = []
-    if 'category' in df.columns:
-        categories = sorted(df['category'].dropna().unique().tolist())
-
-    if not {'country', 'views'}.issubset(df.columns):
-        all_countries = pd.DataFrame(columns=['country', 'views'])
-    else:
-        all_countries = df.groupby('country', dropna=False)['views'].sum().nlargest(20).reset_index()
-        all_countries.columns = ['country', 'views']
+        country_top_rows = []
+    
+    # Calculate statistics for KPI cards
+    total_channels = len(df)
+    total_subscribers = int(df['subscribers'].sum())
+    total_views = int(df['views'].sum())
+    avg_subscribers = int(df['subscribers'].mean())
 
     return render_template(
         'dashboard.html',
-        all_channels=all_channels.to_dict(orient='records'),
-        all_countries=all_countries.to_dict(orient='records'),
-        categories=categories,
+        channel_labels=channel_labels,
+        channel_subscribers=channel_subscribers,
+        country_labels=country_labels,
+        country_values=country_values,
+        all_countries=all_countries,
+        selected_country=selected_country,
+        country_top_rows=country_top_rows,
+        total_channels=total_channels,
+        total_subscribers=total_subscribers,
+        total_views=total_views,
+        avg_subscribers=avg_subscribers,
+        num_channels=num_channels,
+        num_countries=num_countries
     )
 
 if __name__ == '__main__':

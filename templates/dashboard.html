@@ -1,352 +1,705 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>YouTube Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - YouTube Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
     <style>
-        body { background-color: #f6f8fb; }
-        .card { border: none; box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,0.06); }
-        .chart-card { height: 420px; }
-        .chart-wrapper { position: relative; height: 320px; }
-        .table-card { overflow: hidden; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.2rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .kpi-card:nth-child(1) { border-left-color: #667eea; animation-delay: 0.1s; }
+        .kpi-card:nth-child(2) { border-left-color: #f093fb; animation-delay: 0.2s; }
+        .kpi-card:nth-child(3) { border-left-color: #4facfe; animation-delay: 0.3s; }
+        .kpi-card:nth-child(4) { border-left-color: #43e97b; animation-delay: 0.4s; }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .kpi-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            animation: fadeIn 0.8s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .chart-card h3 {
+            margin-bottom: 1.5rem;
+            color: #333;
+            font-size: 1.4rem;
+        }
+        
+        .chart-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .chart-controls h3 {
+            margin: 0;
+        }
+        
+        .chart-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chart-selector label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .chart-selector select {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .chart-selector select:hover {
+            border-color: #667eea;
+        }
+        
+        .chart-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        canvas {
+            max-height: 400px;
+        }
+        
+        .table-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .table-header h3 {
+            color: #333;
+            font-size: 1.4rem;
+        }
+        
+        .country-filter {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .country-filter label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .country-filter select {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .country-filter select:hover {
+            border-color: #667eea;
+        }
+        
+        .country-filter select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        
+        th:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        th.sortable:after {
+            content: '⇅';
+            position: absolute;
+            right: 1rem;
+            opacity: 0.5;
+        }
+        
+        th.sort-asc:after {
+            content: '↑';
+            opacity: 1;
+        }
+        
+        th.sort-desc:after {
+            content: '↓';
+            opacity: 1;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.01);
+        }
+        
+        td {
+            padding: 1rem;
+            color: #555;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        tbody tr:nth-child(even):hover {
+            background: #f8f9fa;
+        }
+        
+        .number {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        
+        /* Scroll to Top Button */
+        .scroll-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 1.5rem;
+        }
+        
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .scroll-to-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        /* Table wrapper for horizontal scroll */
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: visible;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .navbar h1 {
+                font-size: 1.3rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
-        <div class="container-xxl">
-            <a class="navbar-brand fw-semibold" href="/">YouTube Analytics</a>
-        </div>
+    <nav class="navbar">
+        <h1>📊 YouTube Analytics Dashboard</h1>
+        <a href="/">← Home</a>
     </nav>
-
-    <main class="container-xxl py-4 py-md-5">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-            <h2 class="m-0">Global YouTube Dashboard</h2>
-            <a class="btn btn-outline-primary" href="/">Home</a>
-        </div>
-
-        <div class="row g-4">
-            <!-- Pie Chart -->
-            <div class="col-12 col-lg-6">
-                <div class="card chart-card p-3 p-md-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="m-0">Top Countries by Total Views</h5>
-                        <select class="form-select form-select-sm w-auto" id="countryLimit">
-                            <option value="3">Top 3</option>
-                            <option value="5" selected>Top 5</option>
-                            <option value="10">Top 10</option>
-                            <option value="15">Top 15</option>
-                            <option value="20">Top 20</option>
-                        </select>
-                    </div>
-                    <div class="chart-wrapper">
-                        <canvas id="countryChart"></canvas>
-                    </div>
-                    {% if not all_countries %}
-                        <p class="text-center text-muted m-0">No country data available.</p>
-                    {% endif %}
-                </div>
+    
+    <div class="container">
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon">📺</div>
+                <div class="kpi-label">Total Channels</div>
+                <div class="kpi-value">{{ '{:,}'.format(total_channels) }}</div>
             </div>
-
-            <!-- Bar Chart -->
-            <div class="col-12 col-lg-6">
-                <div class="card chart-card p-3 p-md-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <h5 class="m-0">Top Channels by Subscribers</h5>
-                        <div class="d-flex gap-2">
-                            <select class="form-select form-select-sm" id="categoryFilter" style="min-width: 140px;">
-                                <option value="all" selected>All Categories</option>
-                                {% for cat in categories %}
-                                <option value="{{ cat }}">{{ cat }}</option>
-                                {% endfor %}
-                            </select>
-                            <select class="form-select form-select-sm" id="channelLimit" style="min-width: 100px;">
-                                <option value="5">Top 5</option>
-                                <option value="10" selected>Top 10</option>
-                                <option value="15">Top 15</option>
-                                <option value="20">Top 20</option>
-                                <option value="30">Top 30</option>
-                                <option value="50">Top 50</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="chart-wrapper">
-                        <canvas id="channelChart"></canvas>
-                    </div>
-                    {% if not all_channels %}
-                        <p class="text-center text-muted m-0">No channel data available.</p>
-                    {% endif %}
-                </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">👥</div>
+                <div class="kpi-label">Total Subscribers</div>
+                <div class="kpi-value">{{ '{:,.0f}'.format(total_subscribers / 1000000000) }}B</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">👁️</div>
+                <div class="kpi-label">Total Views</div>
+                <div class="kpi-value">{{ '{:,.0f}'.format(total_views / 1000000000000) }}T</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-label">Avg Subscribers</div>
+                <div class="kpi-value">{{ '{:,.0f}'.format(avg_subscribers / 1000000) }}M</div>
             </div>
         </div>
-
-        <div class="card table-card mt-4">
-            <div class="card-header bg-white">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="m-0">Channel Details</h5>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <select class="form-select form-select-sm" id="tableCountryFilter" style="min-width: 150px;">
-                            <option value="all" selected>All Countries</option>
-                        </select>
-                        <select class="form-select form-select-sm" id="tableCategoryFilter" style="min-width: 140px;">
-                            <option value="all" selected>All Categories</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat }}">{{ cat }}</option>
-                            {% endfor %}
-                        </select>
-                        <select class="form-select form-select-sm" id="tableLimit" style="min-width: 100px;">
-                            <option value="10" selected>Show 10</option>
-                            <option value="20">Show 20</option>
-                            <option value="30">Show 30</option>
-                            <option value="50">Show 50</option>
+        
+        <!-- Charts -->
+        <div class="chart-grid">
+            <div class="chart-card">
+                <div class="chart-controls">
+                    <h3>🌍 Top Countries by Total Views</h3>
+                    <div class="chart-selector">
+                        <label for="numCountries">Show:</label>
+                        <select id="numCountries" onchange="updateChart('countries')">
+                            <option value="3" {% if num_countries == 3 %}selected{% endif %}>Top 3</option>
+                            <option value="5" {% if num_countries == 5 %}selected{% endif %}>Top 5</option>
+                            <option value="10" {% if num_countries == 10 %}selected{% endif %}>Top 10</option>
+                            <option value="15" {% if num_countries == 15 %}selected{% endif %}>Top 15</option>
+                            <option value="20" {% if num_countries == 20 %}selected{% endif %}>Top 20</option>
                         </select>
                     </div>
                 </div>
+                <canvas id="pieCountries"></canvas>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped align-middle m-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Channel Name</th>
-                                <th class="text-end">Subscribers</th>
-                                <th class="text-end">Views</th>
-                                <th>Category</th>
-                                <th>Country</th>
-                            </tr>
-                        </thead>
-                        <tbody id="channelTableBody">
-                            {% if all_channels %}
-                                {% for ch in all_channels[:10] %}
-                                <tr>
-                                    <td>{{ ch.channel_name }}</td>
-                                    <td class="text-end">{{ "{:,.0f}".format(ch.subscribers) if ch.subscribers else 'N/A' }}</td>
-                                    <td class="text-end">{{ "{:,.0f}".format(ch.views) if ch.views else 'N/A' }}</td>
-                                    <td>{{ ch.category if ch.category else 'N/A' }}</td>
-                                    <td>{{ ch.country }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">No data available.</td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+            
+            <div class="chart-card">
+                <div class="chart-controls">
+                    <h3>🏆 Top Channels by Subscribers</h3>
+                    <div class="chart-selector">
+                        <label for="numChannels">Show:</label>
+                        <select id="numChannels" onchange="updateChart('channels')">
+                            <option value="5" {% if num_channels == 5 %}selected{% endif %}>Top 5</option>
+                            <option value="10" {% if num_channels == 10 %}selected{% endif %}>Top 10</option>
+                            <option value="15" {% if num_channels == 15 %}selected{% endif %}>Top 15</option>
+                            <option value="20" {% if num_channels == 20 %}selected{% endif %}>Top 20</option>
+                            <option value="30" {% if num_channels == 30 %}selected{% endif %}>Top 30</option>
+                            <option value="50" {% if num_channels == 50 %}selected{% endif %}>Top 50</option>
+                        </select>
+                    </div>
                 </div>
+                <canvas id="barChannels"></canvas>
             </div>
         </div>
-    </main>
-
-<script>
-    // Data injected from Flask (stringified JSON for editor friendliness)
-    const ALL_COUNTRIES = JSON.parse('{{ all_countries | tojson | safe }}');
-    const ALL_CHANNELS = JSON.parse('{{ all_channels | tojson | safe }}');
-
-    // Chart instances
-    let countryChartInstance = null;
-    let channelChartInstance = null;
-
-    // Category color mapping
-    const CATEGORY_COLORS = {
-        'Music': '#FF6384',
-        'Entertainment': '#36A2EB',
-        'Gaming': '#FFCE56',
-        'Sports': '#4BC0C0',
-        'News': '#9966FF',
-        'Education': '#FF9F40',
-        'Comedy': '#FF6384',
-        'Film & Animation': '#C9CBCF',
-        'People & Blogs': '#4BC0C0',
-        'Science & Technology': '#36A2EB',
-        'Autos & Vehicles': '#FFCE56',
-        'Pets & Animals': '#FF9F40',
-        'Travel & Events': '#9966FF',
-        'Howto & Style': '#FF6384',
-        'Nonprofits & Activism': '#4BC0C0',
-        'Shows': '#36A2EB',
-        'Trailers': '#FFCE56',
-        'Movies': '#C9CBCF',
-        'Games': '#9966FF'
-    };
-
-    function getCategoryColor(category) {
-        return CATEGORY_COLORS[category] || '#95A5A6';
-    }
-
-    // Function to update country chart
-    function updateCountryChart(limit) {
-        const data = ALL_COUNTRIES.slice(0, limit);
-        const labels = data.map(x => x.country ?? '');
-        const values = data.map(x => x.views ?? 0);
-
-        const countryCtx = document.getElementById('countryChart');
-        if (!countryCtx) return;
-
-        if (countryChartInstance) {
-            countryChartInstance.destroy();
+        
+        <!-- Table Section -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>🎯 Top 5 Channels by Country</h3>
+                <div class="country-filter">
+                    <label for="country">🌐 Country:</label>
+                    <select id="country" name="country" onchange="this.form.submit()">
+                        {% for c in all_countries %}
+                            <option value="{{ c }}" {% if c == selected_country %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            {% if country_top_rows %}
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0)">Channel Name</th>
+                            <th class="sortable" onclick="sortTable(1)">Subscribers</th>
+                            <th class="sortable" onclick="sortTable(2)">Views</th>
+                            <th>Country</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in country_top_rows %}
+                        <tr>
+                            <td>{{ r.get('channel_name', '') }}</td>
+                            <td class="number">{{ '{:,}'.format(r.get('subscribers', 0)|int) }}</td>
+                            <td class="number">{{ '{:,}'.format(r.get('views', 0)|int) }}</td>
+                            <td>{{ r.get('country', '') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="text-align: center; padding: 2rem; color: #999;">No data available for this country.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        // Generate color palette dynamically
+        function generateColors(count) {
+            const baseColors = [
+                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
+                '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731', '#5f27cd',
+                '#00d2d3', '#1dd1a1', '#feca57', '#ff9ff3', '#54a0ff',
+                '#48dbfb', '#f368e0', '#ff9f43', '#ee5a6f', '#c44569'
+            ];
+            
+            if (count <= baseColors.length) {
+                return baseColors.slice(0, count);
+            }
+            
+            // Generate additional colors if needed
+            const colors = [...baseColors];
+            for (let i = baseColors.length; i < count; i++) {
+                const hue = (i * 137.5) % 360; // Golden angle for even distribution
+                colors.push(`hsl(${hue}, 70%, 60%)`);
+            }
+            return colors;
         }
-
-        countryChartInstance = new Chart(countryCtx, {
+        
+        // Pie chart for countries
+        {% if country_labels and country_values %}
+        const pieCtx = document.getElementById('pieCountries').getContext('2d');
+        const countryColors = generateColors({{ country_labels | length }});
+        new Chart(pieCtx, {
             type: 'pie',
             data: {
-                labels: labels,
+                labels: {{ country_labels | tojson }},
                 datasets: [{
-                    data: values,
-                    backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#4BC0C0','#9966FF','#FF6384','#36A2EB','#FFCE56','#FF9F40','#4BC0C0','#9966FF','#FF6384','#36A2EB','#FFCE56','#FF9F40','#4BC0C0','#9966FF']
+                    data: {{ country_values | tojson }},
+                    backgroundColor: countryColors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
                 plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
-    // Function to update channel chart
-    function updateChannelChart(limit, category = 'all') {
-        // Filter by category
-        let filteredData = ALL_CHANNELS;
-        if (category !== 'all') {
-            filteredData = ALL_CHANNELS.filter(ch => ch.category === category);
-        }
-
-        const data = filteredData.slice(0, limit);
-        const labels = data.map(x => x.channel_name ?? '');
-        const values = data.map(x => x.subscribers ?? 0);
-        const colors = data.map(x => getCategoryColor(x.category));
-
-        const channelCtx = document.getElementById('channelChart');
-        if (!channelCtx) return;
-
-        if (channelChartInstance) {
-            channelChartInstance.destroy();
-        }
-
-        channelChartInstance = new Chart(channelCtx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Subscribers',
-                    data: values,
-                    backgroundColor: colors
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
-                    y: { beginAtZero: true }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { 
-                        mode: 'index', 
-                        intersect: false,
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
                         callbacks: {
-                            afterLabel: function(context) {
-                                const channel = data[context.dataIndex];
-                                return channel.category ? 'Category: ' + channel.category : '';
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const formatted = value.toLocaleString('en-US');
+                                return `${label}: ${formatted} views`;
                             }
                         }
                     }
                 }
             }
         });
-    }
-
-    // Event listeners for dropdowns
-    document.getElementById('countryLimit').addEventListener('change', (e) => {
-        updateCountryChart(parseInt(e.target.value));
-    });
-
-    document.getElementById('channelLimit').addEventListener('change', (e) => {
-        const limit = parseInt(e.target.value);
-        const category = document.getElementById('categoryFilter').value;
-        updateChannelChart(limit, category);
-    });
-
-    document.getElementById('categoryFilter').addEventListener('change', (e) => {
-        const limit = parseInt(document.getElementById('channelLimit').value);
-        const category = e.target.value;
-        updateChannelChart(limit, category);
-    });
-
-    // Initial render
-    updateCountryChart(5);
-    updateChannelChart(10, 'all');
-
-    // Populate country filter dropdown
-    const uniqueCountries = [...new Set(ALL_CHANNELS.map(ch => ch.country).filter(c => c))].sort();
-    const countryFilterSelect = document.getElementById('tableCountryFilter');
-    uniqueCountries.forEach(country => {
-        const option = document.createElement('option');
-        option.value = country;
-        option.textContent = country;
-        countryFilterSelect.appendChild(option);
-    });
-
-    // Function to update table
-    function updateTable(limit, country = 'all', category = 'all') {
-        let filteredData = ALL_CHANNELS;
-
-        // Filter by country
-        if (country !== 'all') {
-            filteredData = filteredData.filter(ch => ch.country === country);
-        }
-
-        // Filter by category
-        if (category !== 'all') {
-            filteredData = filteredData.filter(ch => ch.category === category);
-        }
-
-        const data = filteredData.slice(0, limit);
-        const tbody = document.getElementById('channelTableBody');
+        {% endif %}
         
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No channels match your filters.</td></tr>';
-            return;
+        // Bar chart for channels
+        {% if channel_labels and channel_subscribers %}
+        const barCtx = document.getElementById('barChannels').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ channel_labels | tojson }},
+                datasets: [{
+                    label: 'Subscribers',
+                    data: {{ channel_subscribers | tojson }},
+                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    borderColor: 'rgb(102, 126, 234)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return (value / 1000000).toFixed(0) + 'M';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(index);
+                                return label.length > 15 ? label.substr(0, 15) + '...' : label;
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Subscribers: ' + context.parsed.y.toLocaleString('en-US');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+        
+        // Table sorting functionality
+        function sortTable(columnIndex) {
+            const table = document.getElementById('dataTable');
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            const header = table.tHead.rows[0].cells[columnIndex];
+            
+            // Determine sort direction
+            const isAscending = header.classList.contains('sort-asc');
+            
+            // Remove all sort classes
+            Array.from(table.tHead.rows[0].cells).forEach(cell => {
+                cell.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // Add appropriate sort class
+            header.classList.add(isAscending ? 'sort-desc' : 'sort-asc');
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].innerText;
+                let bValue = b.cells[columnIndex].innerText;
+                
+                // Handle numbers
+                if (columnIndex === 1 || columnIndex === 2) {
+                    aValue = parseInt(aValue.replace(/,/g, ''));
+                    bValue = parseInt(bValue.replace(/,/g, ''));
+                }
+                
+                if (aValue < bValue) return isAscending ? 1 : -1;
+                if (aValue > bValue) return isAscending ? -1 : 1;
+                return 0;
+            });
+            
+            // Reappend sorted rows
+            rows.forEach(row => tbody.appendChild(row));
         }
-
-        tbody.innerHTML = data.map(ch => `
-            <tr>
-                <td>${ch.channel_name || 'N/A'}</td>
-                <td class="text-end">${ch.subscribers ? ch.subscribers.toLocaleString() : 'N/A'}</td>
-                <td class="text-end">${ch.views ? ch.views.toLocaleString() : 'N/A'}</td>
-                <td>${ch.category || 'N/A'}</td>
-                <td>${ch.country || 'N/A'}</td>
-            </tr>
-        `).join('');
-    }
-
-    // Event listeners for table filters
-    document.getElementById('tableCountryFilter').addEventListener('change', (e) => {
-        const country = e.target.value;
-        const category = document.getElementById('tableCategoryFilter').value;
-        const limit = parseInt(document.getElementById('tableLimit').value);
-        updateTable(limit, country, category);
-    });
-
-    document.getElementById('tableCategoryFilter').addEventListener('change', (e) => {
-        const category = e.target.value;
-        const country = document.getElementById('tableCountryFilter').value;
-        const limit = parseInt(document.getElementById('tableLimit').value);
-        updateTable(limit, country, category);
-    });
-
-    document.getElementById('tableLimit').addEventListener('change', (e) => {
-        const limit = parseInt(e.target.value);
-        const country = document.getElementById('tableCountryFilter').value;
-        const category = document.getElementById('tableCategoryFilter').value;
-        updateTable(limit, country, category);
-    });
-</script>
+        
+        // Update country filter
+        document.getElementById('country').addEventListener('change', function() {
+            window.location.href = '/dashboard?country=' + encodeURIComponent(this.value);
+        });
+        
+        // Update chart based on selection
+        function updateChart(chartType) {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (chartType === 'channels') {
+                const numChannels = document.getElementById('numChannels').value;
+                urlParams.set('num_channels', numChannels);
+            } else if (chartType === 'countries') {
+                const numCountries = document.getElementById('numCountries').value;
+                urlParams.set('num_countries', numCountries);
+            }
+            
+            // Preserve existing country filter if present
+            const country = document.getElementById('country')?.value;
+            if (country) {
+                urlParams.set('country', country);
+            }
+            
+            window.location.href = '/dashboard?' + urlParams.toString();
+        }
+        
+        // Scroll to top button functionality
+        const scrollButton = document.getElementById('scrollToTop');
+        
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {
+                scrollButton.classList.add('visible');
+            } else {
+                scrollButton.classList.remove('visible');
+            }
+        });
+        
+        scrollButton.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    </script>
+    
+    <!-- Scroll to Top Button -->
+    <div class="scroll-to-top" id="scrollToTop">↑</div>
 </body>
 </html>
